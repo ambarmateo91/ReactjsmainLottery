@@ -1,12 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { Button } from '../ui/button';
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '../ui/card';
-import { Badge } from '../ui/badge';
-import { Separator } from '../ui/separator';
-import { ticketApi, prizeApi } from '../../lib/supabase';
-import { formatTicketForPrint, generateTicketHTML, type TicketPrintData } from '../../lib/ticket-format';
+import { Button } from '@/components/ui/button';
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { ticketApi, prizeApi } from '@/lib/supabase';
+import { formatTicketForPrint, generateTicketHTML, type TicketPrintData } from '@/lib/ticket-format';
 import { Print, Download, Ticket as TicketIcon, Loader2 } from 'lucide-react';
 
 interface PrintableTicket {

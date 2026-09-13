@@ -1,12 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useAuth } from '../../hooks/useAuth';
-import { DashboardStats } from '../components/dashboard/StatsCards';
-import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card';
-import { lotteryApi, reportsApi, userApi } from '../../lib/supabase';
-import { getActiveLotteries } from '../../lib/lottery-utils';
-import { formatCurrency } from '../../lib/utils';
+import { useAuth } from '@/hooks/useAuth';
+import { DashboardStats } from '@/components/dashboard/StatsCards';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { lotteryApi, reportsApi, userApi } from '@/lib/supabase';
+import { getActiveLotteries } from '@/lib/lottery-utils';
+import { formatCurrency } from '@/lib/utils';
 import { Loader2, Ticket, TrendingUp, Users, DollarSign, BarChart3 } from 'lucide-react';
 
 export function Dashboard() {

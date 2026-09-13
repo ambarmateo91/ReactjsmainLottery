@@ -1,13 +1,13 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { Toaster } from '../components/ui/toaster';
-import { AppLayout } from '../components/layout/AppLayout';
-import { Login } from '../pages/Login';
-import { Dashboard } from '../pages/Dashboard';
-import { SellTicket } from '../components/lottery/SellTicket';
-import { VerifyPrize } from '../components/lottery/VerifyPrize';
-import { TicketPrint } from '../components/lottery/TicketPrint';
-import { CancelTicket } from '../components/lottery/CancelTicket';
-import { useAuth } from '../hooks/useAuth';
+import { Toaster } from '@/components/ui/toaster';
+import { AppLayout } from '@/components/layout/AppLayout';
+import { Login } from '@/pages/Login';
+import { Dashboard } from '@/pages/Dashboard';
+import { SellTicket } from '@/components/lottery/SellTicket';
+import { VerifyPrize } from '@/components/lottery/VerifyPrize';
+import { TicketPrint } from '@/components/lottery/TicketPrint';
+import { CancelTicket } from '@/components/lottery/CancelTicket';
+import { useAuth } from '@/hooks/useAuth';
 
 function ProtectedRoute({ children, adminOnly = false }: { children: React.ReactNode; adminOnly?: boolean }) {
   const { user, loading, isAdmin, isSeller } = useAuth();
