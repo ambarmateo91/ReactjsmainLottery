@@ -4,13 +4,12 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { DashboardStats } from '@/components/dashboard/StatsCards';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { lotteryApi, reportsApi, userApi } from '@/lib/supabase';
+import { reportsApi, userApi } from '@/lib/api';
 import { getActiveLotteries } from '@/lib/lottery-utils';
-import { formatCurrency } from '@/lib/utils';
-import { Loader2, Ticket, TrendingUp, Users, DollarSign, BarChart3 } from 'lucide-react';
+import { Ticket, TrendingUp } from 'lucide-react';
 
 export function Dashboard() {
-  const { isAdmin, isSeller } = useAuth();
+  const { isAdmin } = useAuth();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     totalSales: 0,

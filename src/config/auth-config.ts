@@ -1,15 +1,10 @@
-import { createClient } from '@supabase/supabase-js';
+export const POSTGREST_CONFIG = {
+  url: import.meta.env.VITE_POSTGREST_URL || 'http://localhost:3000',
+  schema: import.meta.env.VITE_POSTGREST_SCHEMA || 'public',
+  apiKey: import.meta.env.VITE_POSTGREST_API_KEY || 'dummy_key_for_direct_connection',
+};
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://your-project.supabase.co';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'your-anon-key';
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true,
-  },
-});
-
-export const getSupabaseUrl = () => supabaseUrl;
-export const getSupabaseAnonKey = () => supabaseAnonKey;
+export const APP_CONFIG = {
+  name: import.meta.env.VITE_APP_NAME || 'Sistema de Lotería',
+  url: import.meta.env.VITE_APP_URL || 'http://localhost:5173',
+};

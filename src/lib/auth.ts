@@ -1,9 +1,63 @@
-import { supabase } from '../config/auth-config';
-import type { AuthUser, Session, LoginCredentials, RegisterData, AuthState } from '../types/auth';
+import type { AuthUser, Session, LoginCredentials, RegisterData } from '../types/auth';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-interface AuthStore extends AuthState {
+const API_BASE = '/api';
+
+async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  const response = await fetch(`${API_BASE}${endpoint}`, {
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+    ...options,
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`API error: ${response.status} - ${error}`);
+  }
+
+  if (response.status === 204) {
+    return null as T;
+  }
+
+  return response.json();
+}
+
+export const authApi = {
+  async login(credentials: LoginCredentials) {
+    return fetchApi<{ user: AuthUser; session: Session }>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify(credentials),
+    });
+  },
+
+  async register(data: RegisterData) {
+    return fetchApi<{ user: AuthUser; session: Session }>('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async logout() {
+    return fetchApi<void>('/auth/logout', { method: 'POST' });
+  },
+
+  async refresh() {
+    return fetchApi<{ user: AuthUser; session: Session }>('/auth/refresh', { method: 'POST' });
+  },
+
+  async getCurrentUser() {
+    return fetchApi<AuthUser>('/auth/me');
+  },
+};
+
+interface AuthState {
+  user: AuthUser | null;
+  session: Session | null;
+  loading: boolean;
+  error: string | null;
   signIn: (credentials: LoginCredentials) => Promise<void>;
   signUp: (data: RegisterData) => Promise<void>;
   signOut: () => Promise<void>;
@@ -12,9 +66,9 @@ interface AuthStore extends AuthState {
   setSession: (session: Session | null) => void;
 }
 
-export const useAuthStore = create<AuthStore>()(
+export const useAuthStore = create<AuthState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       user: null,
       session: null,
       loading: true,
@@ -22,70 +76,46 @@ export const useAuthStore = create<AuthStore>()(
 
       signIn: async (credentials) => {
         set({ loading: true, error: null });
-        const { data, error } = await supabase.auth.signInWithPassword(credentials);
-        if (error) {
-          set({ error: error.message, loading: false });
+        try {
+          const { user, session } = await authApi.login(credentials);
+          set({ user, session, loading: false });
+        } catch (error) {
+          set({ error: error instanceof Error ? error.message : 'Error de autenticación', loading: false });
           throw error;
-        }
-        if (data.user && data.session) {
-          set({
-            user: data.user as AuthUser,
-            session: data.session as Session,
-            loading: false,
-          });
         }
       },
 
       signUp: async (data) => {
         set({ loading: true, error: null });
-        const { data: authData, error } = await supabase.auth.signUp({
-          email: data.email,
-          password: data.password,
-          options: {
-            data: {
-              full_name: data.full_name,
-              phone: data.phone,
-            },
-          },
-        });
-        if (error) {
-          set({ error: error.message, loading: false });
+        try {
+          const { user, session } = await authApi.register(data);
+          set({ user, session, loading: false });
+        } catch (error) {
+          set({ error: error instanceof Error ? error.message : 'Error de registro', loading: false });
           throw error;
-        }
-        if (authData.user && authData.session) {
-          set({
-            user: authData.user as AuthUser,
-            session: authData.session as Session,
-            loading: false,
-          });
         }
       },
 
       signOut: async () => {
         set({ loading: true });
-        const { error } = await supabase.auth.signOut();
-        if (error) {
-          set({ error: error.message, loading: false });
+        try {
+          await authApi.logout();
+          set({ user: null, session: null, loading: false });
+        } catch (error) {
+          set({ error: error instanceof Error ? error.message : 'Error al cerrar sesión', loading: false });
           throw error;
         }
-        set({ user: null, session: null, loading: false });
       },
 
       refreshSession: async () => {
-        const { data, error } = await supabase.auth.getSession();
-        if (error) {
-          set({ error: error.message });
-          return;
-        }
-        if (data.session) {
-          set({
-            user: data.session.user as AuthUser,
-            session: data.session as Session,
-          });
-        } else {
+        try {
+          const { user, session } = await authApi.refresh();
+          set({ user, session });
+        } catch {
           set({ user: null, session: null });
+        } finally {
+          set({ loading: false });
         }
-        set({ loading: false });
       },
 
       setUser: (user) => set({ user }),
@@ -101,18 +131,17 @@ export const useAuthStore = create<AuthStore>()(
   )
 );
 
-export const getCurrentUser = async (): Promise<AuthUser | null> => {
-  const { data } = await supabase.auth.getUser();
-  return data.user as AuthUser | null;
-};
-
-export const getSession = async (): Promise<Session | null> => {
-  const { data } = await supabase.auth.getSession();
-  return data.session as Session | null;
-};
-
-export const onAuthStateChange = (callback: (user: AuthUser | null, session: Session | null) => void) => {
-  return supabase.auth.onAuthStateChange((_event, session) => {
-    callback(session?.user as AuthUser | null, session as Session | null);
-  });
+export const initializeAuth = async () => {
+  try {
+    const user = await authApi.getCurrentUser();
+    if (user) {
+      const session = { access_token: '', refresh_token: '', expires_at: 0, user } as any;
+      useAuthStore.getState().setUser(user);
+      useAuthStore.getState().setSession(session);
+    }
+  } catch {
+    // No session
+  } finally {
+    useAuthStore.setState({ loading: false });
+  }
 };

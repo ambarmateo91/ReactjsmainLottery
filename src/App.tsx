@@ -10,7 +10,7 @@ import { CancelTicket } from '@/components/lottery/CancelTicket';
 import { useAuth } from '@/hooks/useAuth';
 
 function ProtectedRoute({ children, adminOnly = false }: { children: React.ReactNode; adminOnly?: boolean }) {
-  const { user, loading, isAdmin, isSeller } = useAuth();
+  const { user, loading, isAdmin } = useAuth();
 
   if (loading) {
     return (

@@ -3,11 +3,9 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { ticketApi, prizeApi } from '@/lib/supabase';
 import { formatTicketForPrint, generateTicketHTML, type TicketPrintData } from '@/lib/ticket-format';
-import { Print, Download, Ticket as TicketIcon, Loader2 } from 'lucide-react';
+import { Printer, Download, Ticket as TicketIcon, Loader2 } from 'lucide-react';
 
 interface PrintableTicket {
   id: string;
@@ -24,30 +22,9 @@ interface PrintableTicket {
 }
 
 export function TicketPrint({ ticket: initialTicket }: { ticket?: PrintableTicket }) {
-  const [ticket, setTicket] = useState<PrintableTicket | null>(initialTicket || null);
-  const [prizes, setPrizes] = useState<Array<{ name: string; value: number; condition: string }>>([]);
-  const [loading, setLoading] = useState(false);
+  const [ticket] = useState<PrintableTicket | null>(initialTicket || null);
+  const [prizes] = useState<Array<{ name: string; value: number; condition: string }>>([]);
   const [printing, setPrinting] = useState(false);
-
-  const loadTicketDetails = async (ticketId: string) => {
-    try {
-      const ticketData = await ticketApi.getById(ticketId);
-      if (ticketData) {
-        const lotteryPrizes = await prizeApi.getByLottery(ticketData.lottery_id);
-        setPrizes(lotteryPrizes.map(p => ({
-          name: p.prize_name,
-          value: p.prize_value,
-          condition: p.winning_condition,
-        })));
-        setTicket({
-          ...ticketData,
-          lottery_name: '', // Would need to fetch separately
-        } as PrintableTicket);
-      }
-    } catch (error) {
-      console.error('Error loading ticket:', error);
-    }
-  };
 
   const handlePrint = () => {
     if (!ticket) return;
@@ -203,7 +180,7 @@ export function TicketPrint({ ticket: initialTicket }: { ticket?: PrintableTicke
             </>
           ) : (
             <>
-              <Print className="mr-2 h-4 w-4" />
+              <Printer className="mr-2 h-4 w-4" />
               Imprimir
             </>
           )}

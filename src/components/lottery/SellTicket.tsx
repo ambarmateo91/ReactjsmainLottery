@@ -4,17 +4,17 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useToast } from '../../hooks/use-toast';
-import { useAuth } from '../../hooks/useAuth';
-import { Button } from '../ui/button';
-import { Input } from '../ui/input';
-import { Label } from '../ui/label';
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '../ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { ticketApi, lotteryApi, validateTicketSale } from '../../lib/supabase';
-import { getActiveLotteries } from '../../lib/lottery-utils';
-import { formatCurrency } from '../../lib/utils';
-import { Loader2, CreditCard, User, Ticket as TicketIcon } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ticketApi, validateTicketSale } from '@/lib/api';
+import { getActiveLotteries } from '@/lib/lottery-utils';
+import { formatCurrency } from '@/lib/utils';
+import { Loader2, CreditCard, Ticket as TicketIcon } from 'lucide-react';
 
 const sellSchema = z.object({
   lotteryId: z.string().min(1, 'Selecciona una lotería'),

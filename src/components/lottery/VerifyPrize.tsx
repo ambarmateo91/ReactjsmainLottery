@@ -8,11 +8,11 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { ticketApi, resultApi, prizeApi } from '@/lib/supabase';
-import { Search, CheckCircle, XCircle, Loader2, Award, Ticket as TicketIcon } from 'lucide-react';
+import { ticketApi, lotteryApi } from '@/lib/api';
+import { Search, CheckCircle, Loader2, Award, Ticket as TicketIcon } from 'lucide-react';
 
 const verifySchema = z.object({
   ticketNumber: z.string().min(1, 'Ingresa el número de boleto'),
@@ -41,7 +41,7 @@ export function VerifyPrize() {
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(false);
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<VerifyForm>({
+  const { register, handleSubmit, formState: { errors } } = useForm<VerifyForm>({
     resolver: zodResolver(verifySchema),
   });
 
@@ -57,11 +57,7 @@ export function VerifyPrize() {
 
       let lotteryName = '';
       try {
-        const { data: lottery } = await supabase
-          .from('lotteries')
-          .select('name')
-          .eq('id', result.lottery_id)
-          .single();
+        const lottery = await lotteryApi.getById(result.lottery_id);
         lotteryName = lottery?.name || '';
       } catch {}
 
@@ -213,6 +209,3 @@ export function VerifyPrize() {
     </Card>
   );
 }
-
-// Need to import supabase for the lottery name lookup
-import { supabase } from '../../config/auth-config';

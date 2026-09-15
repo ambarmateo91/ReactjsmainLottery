@@ -8,12 +8,13 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
-import { ticketApi } from '@/lib/supabase';
+import { ticketApi, lotteryApi } from '@/lib/api';
 import { Search, XCircle, Loader2, Ticket as TicketIcon, AlertTriangle } from 'lucide-react';
 
 const cancelSchema = z.object({
@@ -66,11 +67,7 @@ export function CancelTicket() {
 
       let lotteryName = '';
       try {
-        const { data: lottery } = await supabase
-          .from('lotteries')
-          .select('name')
-          .eq('id', result.lottery_id)
-          .single();
+        const lottery = await lotteryApi.getById(result.lottery_id);
         lotteryName = lottery?.name || '';
       } catch {}
 
@@ -186,11 +183,10 @@ export function CancelTicket() {
             <form onSubmit={handleSubmit(() => {})} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="reason">Razón de cancelación *</Label>
-                <Input
+                <Textarea
                   id="reason"
                   {...register('reason')}
                   placeholder="Motivo de la cancelación..."
-                  multiline
                   rows={3}
                 />
                 {errors.reason && <p className="text-sm text-red-500">{errors.reason.message}</p>}
@@ -236,15 +232,3 @@ export function CancelTicket() {
     </Card>
   );
 }
-
-const getStatusBadge = (status: string) => {
-  switch (status) {
-    case 'sold': return <Badge variant="success">Vendido</Badge>;
-    case 'cancelled': return <Badge variant="destructive">Cancelado</Badge>;
-    case 'claimed': return <Badge variant="default">Premio Reclamado</Badge>;
-    default: return <Badge variant="secondary">{status}</Badge>;
-  }
-};
-
-// Need to import supabase
-import { supabase } from '../../config/auth-config';

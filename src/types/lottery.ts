@@ -55,7 +55,7 @@ export interface Ticket {
   customer_phone?: string;
   seller_id: string;
   seller_name: string;
-  status: 'sold' | 'cancelled' | 'pending';
+  status: 'sold' | 'cancelled' | 'pending' | 'claimed';
   sold_at: string;
   cancelled_at?: string;
   prize_won?: number;
