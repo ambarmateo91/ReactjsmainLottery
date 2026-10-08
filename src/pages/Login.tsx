@@ -11,10 +11,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
-import { Loader2, Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { Loader2, User, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
 
 const loginSchema = z.object({
-  email: z.string().email('Email inválido'),
+  username: z.string().min(3, 'Mínimo 3 caracteres'),
   password: z.string().min(6, 'Mínimo 6 caracteres'),
 });
 
@@ -29,12 +29,13 @@ export function Login() {
 
   const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
+    defaultValues: { username: '', password: '' },
   });
 
   const onSubmit = async (data: LoginForm) => {
     setLoading(true);
     try {
-      await signIn(data);
+      await signIn({ username: data.username ?? '', password: data.password ?? '' });
       toast({ title: 'Bienvenido', description: 'Inicio de sesión exitoso', variant: 'success' });
       navigate('/');
     } catch (error) {
@@ -49,30 +50,29 @@ export function Login() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 w-12 h-12 bg-primary rounded-full flex items-center justify-center">
-            <Mail className="h-6 w-6 text-primary-foreground" />
+            <User className="h-6 w-6 text-primary-foreground" />
           </div>
           <CardTitle>Iniciar Sesión</CardTitle>
           <CardDescription>Accede al sistema de lotería</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <form id="login-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="username">Usuario</Label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  id="email"
-                  type="email"
-                  {...register('email')}
-                  placeholder="usuario@ejemplo.com"
+                  id="username"
+                  type="text"
+                  {...register('username')}
                   className="pl-10"
                   disabled={loading}
                 />
               </div>
-              {errors.email && (
+              {errors.username && (
                 <p className="text-sm text-red-500 flex items-center gap-1">
                   <AlertCircle className="h-3 w-3" />
-                  {errors.email.message}
+                  {errors.username.message}
                 </p>
               )}
             </div>
@@ -117,9 +117,6 @@ export function Login() {
               'Iniciar Sesión'
             )}
           </Button>
-          <p className="text-center text-sm text-muted-foreground">
-            ¿No tienes cuenta? <a href="/register" className="text-primary hover:underline">Regístrate</a>
-          </p>
         </CardFooter>
       </Card>
     </div>

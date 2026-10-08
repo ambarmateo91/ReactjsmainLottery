@@ -5,6 +5,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { cn } from '@/lib/utils';
 import {
   LayoutDashboard,
@@ -24,10 +25,10 @@ import {
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-  { name: 'Vender Boletos', href: '/sell', icon: CreditCard },
+  { name: 'Vender Tickets', href: '/sell', icon: CreditCard },
   { name: 'Verificar Premio', href: '/verify', icon: Search },
   { name: 'Imprimir Ticket', href: '/print', icon: Printer },
-  { name: 'Cancelar Boleto', href: '/cancel', icon: RotateCcw },
+  { name: 'Cancelar Ticket', href: '/cancel', icon: RotateCcw },
 ];
 
 const adminNavigation = [
@@ -131,8 +132,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         <div className="p-3 border-t">
           <div className="flex items-center gap-3 px-3 py-2">
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{user?.user_metadata?.full_name || user?.email}</p>
-              <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+              <p className="text-sm font-medium truncate">{user?.user_metadata?.full_name || user?.username}</p>
+              <p className="text-xs text-muted-foreground truncate">@{user?.username}</p>
             </div>
           </div>
           <Button
@@ -158,6 +159,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </button>
           <div className="flex-1" />
           <div className="flex items-center gap-2">
+            <ThemeToggle />
             <HelpCircle className="h-5 w-5 text-muted-foreground" />
           </div>
         </header>

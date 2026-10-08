@@ -59,7 +59,7 @@ export function VerifyPrize() {
       try {
         const lottery = await lotteryApi.getById(result.lottery_id);
         lotteryName = lottery?.name || '';
-      } catch {}
+      } catch { /* lottery name optional */ }
 
       const verifiedTicket: VerifiedTicket = {
         ...result,
@@ -114,7 +114,7 @@ export function VerifyPrize() {
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="ticketNumber">Número de Boleto *</Label>
+            <Label htmlFor="ticketNumber">Número de Ticket *</Label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input

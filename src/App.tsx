@@ -7,6 +7,11 @@ import { SellTicket } from '@/components/lottery/SellTicket';
 import { VerifyPrize } from '@/components/lottery/VerifyPrize';
 import { TicketPrint } from '@/components/lottery/TicketPrint';
 import { CancelTicket } from '@/components/lottery/CancelTicket';
+import { AdminLotteries } from '@/pages/admin/Lotteries';
+import { AdminResults } from '@/pages/admin/Results';
+import { AdminPrizes } from '@/pages/admin/Prizes';
+import { AdminReports } from '@/pages/admin/Reports';
+import { AdminUsers } from '@/pages/admin/Users';
 import { useAuth } from '@/hooks/useAuth';
 
 function ProtectedRoute({ children, adminOnly = false }: { children: React.ReactNode; adminOnly?: boolean }) {
@@ -49,6 +54,14 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function ProtectedPage({ children }: { children: React.ReactNode }) {
+  return (
+    <ProtectedRoute>
+      <AppLayout>{children}</AppLayout>
+    </ProtectedRoute>
+  );
+}
+
 export function App() {
   return (
     <BrowserRouter>
@@ -58,21 +71,63 @@ export function App() {
             <Login />
           </PublicRoute>
         } />
-        <Route element={
-          <ProtectedRoute>
+        <Route path="/" element={
+          <ProtectedPage>
+            <Dashboard />
+          </ProtectedPage>
+        } />
+        <Route path="/sell" element={
+          <ProtectedPage>
+            <SellTicket />
+          </ProtectedPage>
+        } />
+        <Route path="/verify" element={
+          <ProtectedPage>
+            <VerifyPrize />
+          </ProtectedPage>
+        } />
+        <Route path="/print" element={
+          <ProtectedPage>
+            <TicketPrint />
+          </ProtectedPage>
+        } />
+        <Route path="/cancel" element={
+          <ProtectedPage>
+            <CancelTicket />
+          </ProtectedPage>
+        } />
+        <Route path="/admin/lotteries" element={
+          <ProtectedRoute adminOnly>
             <AppLayout>
-              <Routes>
-                <Route path="/" element={<Dashboard />} />
-                <Route path="/sell" element={<SellTicket />} />
-                <Route path="/verify" element={<VerifyPrize />} />
-                <Route path="/print" element={<TicketPrint />} />
-                <Route path="/cancel" element={<CancelTicket />} />
-                <Route path="/admin/*" element={
-                  <ProtectedRoute adminOnly>
-                    <div>Admin Panel - Coming Soon</div>
-                  </ProtectedRoute>
-                } />
-              </Routes>
+              <AdminLotteries />
+            </AppLayout>
+          </ProtectedRoute>
+        } />
+        <Route path="/admin/results" element={
+          <ProtectedRoute adminOnly>
+            <AppLayout>
+              <AdminResults />
+            </AppLayout>
+          </ProtectedRoute>
+        } />
+        <Route path="/admin/prizes" element={
+          <ProtectedRoute adminOnly>
+            <AppLayout>
+              <AdminPrizes />
+            </AppLayout>
+          </ProtectedRoute>
+        } />
+        <Route path="/admin/reports" element={
+          <ProtectedRoute adminOnly>
+            <AppLayout>
+              <AdminReports />
+            </AppLayout>
+          </ProtectedRoute>
+        } />
+        <Route path="/admin/users" element={
+          <ProtectedRoute adminOnly>
+            <AppLayout>
+              <AdminUsers />
             </AppLayout>
           </ProtectedRoute>
         } />

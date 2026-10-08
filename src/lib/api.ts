@@ -1,165 +1,108 @@
-import { pgRequest } from '../config/database';
-import type { Lottery, Ticket, LotteryResult, PrizeConfiguration, UserProfile, LotterySchedule, SalesSummary, SalesByUser } from '../types/lottery';
+import type { AuthUser, Session, LoginCredentials, RegisterData } from '../types/auth';
 
-const TABLES = {
-  lotteries: 'lotteries',
-  tickets: 'tickets',
-  lottery_results: 'lottery_results',
-  prize_configurations: 'prize_configurations',
-  user_profiles: 'user_profiles',
-  lottery_schedules: 'lottery_schedules',
+const API_BASE = '/api';
+
+export const authApi = {
+  async login(credentials: LoginCredentials) {
+    return fetchApi<{ user: AuthUser; session: Session }>(`${API_BASE}/auth/login`, {
+      method: 'POST',
+      body: JSON.stringify(credentials),
+    });
+  },
+  async logout() {
+    return fetchApi<void>(`${API_BASE}/auth/logout`, { method: 'POST' });
+  },
+  async register(data: RegisterData) {
+    return fetchApi<{ user: AuthUser; session: Session }>(`${API_BASE}/auth/register`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+  async refresh() {
+    return fetchApi<{ user: AuthUser; session: Session }>(`${API_BASE}/auth/refresh`, { method: 'POST' });
+  },
+  async getCurrentUser() {
+    return fetchApi<AuthUser>(`${API_BASE}/auth/me`);
+  },
+};
+
+async function fetchApi<T>(url: string, options: RequestInit = {}): Promise<T> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+  try {
+    const hasBody = options.body !== undefined && options.body !== null;
+    const response = await fetch(url, {
+      ...options,
+      headers: { ...(hasBody ? { 'Content-Type': 'application/json' } : {}), ...options.headers },
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    if (!response.ok) {
+      const errText = await response.text().catch(() => '');
+      throw new Error(`API ${response.status} ${url} - ${errText.slice(0, 200)}`);
+    }
+    if (response.status === 204) return null as T;
+    const text = await response.text();
+    return (text ? JSON.parse(text) : null) as T;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    throw error;
+  }
+}
+
+export const ticketApi = {
+  async getAll() { return fetchApi<Array<any>>(`${API_BASE}/tickets`); },
+  async getById(id: string) { return fetchApi<any>(`${API_BASE}/tickets/${id}`); },
+  async sell(data: any) { return fetchApi<any>(`${API_BASE}/tickets`, { method: 'POST', body: JSON.stringify(data) }); },
+  async verify(ticketNumber: string) { return fetchApi<any>(`${API_BASE}/tickets/verify/${ticketNumber}`); },
+  async cancel(id: string) { return fetchApi<any>(`${API_BASE}/tickets/${id}`, { method: 'PATCH' }); },
+  async update(id: string, data: any) { return fetchApi<any>(`${API_BASE}/tickets/${id}`, { method: 'PATCH', body: JSON.stringify(data) }); },
 };
 
 export const lotteryApi = {
-  async getAll(): Promise<Lottery[]> {
-    const data = await pgRequest<any[]>(`${TABLES.lotteries}?order=created_at.desc`);
-    return data;
-  },
-
-  async getById(id: string): Promise<Lottery | null> {
-    const data = await pgRequest<any[]>(`${TABLES.lotteries}?id=eq.${id}&limit=1`);
-    return data[0] || null;
-  },
-
-  async create(lottery: Omit<Lottery, 'id' | 'created_at' | 'updated_at'>): Promise<Lottery> {
-    const data = await pgRequest<any[]>(TABLES.lotteries, {
-      method: 'POST',
-      body: JSON.stringify(lottery),
-    });
-    return data[0];
-  },
-
-  async update(id: string, updates: Partial<Lottery>): Promise<Lottery> {
-    const data = await pgRequest<any[]>(`${TABLES.lotteries}?id=eq.${id}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ ...updates, updated_at: new Date().toISOString() }),
-    });
-    return data[0];
-  },
-
-  async delete(id: string): Promise<void> {
-    await pgRequest(`${TABLES.lotteries}?id=eq.${id}`, { method: 'DELETE' });
-  },
-};
-
-export const ticketApi = {
-  async getByLottery(lotteryId: string): Promise<Ticket[]> {
-    const data = await pgRequest<any[]>(`${TABLES.tickets}?lottery_id=eq.${lotteryId}&order=sold_at.desc`);
-    return data;
-  },
-
-  async sell(ticket: Omit<Ticket, 'id' | 'sold_at'>): Promise<Ticket> {
-    const data = await pgRequest<any[]>(TABLES.tickets, {
-      method: 'POST',
-      body: JSON.stringify({ ...ticket, sold_at: new Date().toISOString() }),
-    });
-    return data[0];
-  },
-
-  async cancel(id: string): Promise<Ticket> {
-    const data = await pgRequest<any[]>(`${TABLES.tickets}?id=eq.${id}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ status: 'cancelled', cancelled_at: new Date().toISOString() }),
-    });
-    return data[0];
-  },
-
-  async verify(ticketNumber: string): Promise<Ticket | null> {
-    const data = await pgRequest<any[]>(`${TABLES.tickets}?ticket_number=eq.${ticketNumber}&limit=1`);
-    return data[0] || null;
-  },
-
-  async getById(id: string): Promise<Ticket | null> {
-    const data = await pgRequest<any[]>(`${TABLES.tickets}?id=eq.${id}&limit=1`);
-    return data[0] || null;
-  },
-
-  async update(id: string, updates: Partial<Ticket>): Promise<Ticket> {
-    const data = await pgRequest<any[]>(`${TABLES.tickets}?id=eq.${id}`, {
-      method: 'PATCH',
-      body: JSON.stringify(updates),
-    });
-    return data[0];
-  },
-};
-
-export const resultApi = {
-  async getByLottery(lotteryId: string): Promise<LotteryResult[]> {
-    const data = await pgRequest<any[]>(`${TABLES.lottery_results}?lottery_id=eq.${lotteryId}&order=draw_date.desc`);
-    return data;
-  },
-
-  async create(result: Omit<LotteryResult, 'id' | 'created_at'>): Promise<LotteryResult> {
-    const data = await pgRequest<any[]>(TABLES.lottery_results, {
-      method: 'POST',
-      body: JSON.stringify(result),
-    });
-    return data[0];
-  },
+  async getAll() { return fetchApi<Array<any>>(`${API_BASE}/lotteries`); },
+  async getById(id: string) { return fetchApi<any>(`${API_BASE}/lotteries/${id}`); },
+  async create(data: any) { return fetchApi<any>(`${API_BASE}/lotteries`, { method: 'POST', body: JSON.stringify(data) }); },
+  async update(id: string, data: any) { return fetchApi<any>(`${API_BASE}/lotteries/${id}`, { method: 'PATCH', body: JSON.stringify(data) }); },
+  async getSchedules(id: string) { return fetchApi<Array<any>>(`${API_BASE}/lotteries/${id}/schedules`); },
+  async createPrizeConfig(lotteryId: string, data: any) { return fetchApi<any>(`${API_BASE}/lotteries/${lotteryId}/prizes`, { method: 'POST', body: JSON.stringify(data) }); },
+  async updatePrizeConfig(id: string, data: any) { return fetchApi<any>(`${API_BASE}/lotteries/prize-configurations/${id}`, { method: 'PATCH', body: JSON.stringify(data) }); },
 };
 
 export const prizeApi = {
-  async getByLottery(lotteryId: string): Promise<PrizeConfiguration[]> {
-    const data = await pgRequest<any[]>(`${TABLES.prize_configurations}?lottery_id=eq.${lotteryId}&is_active=eq.true`);
-    return data;
-  },
-
-  async create(prize: Omit<PrizeConfiguration, 'id' | 'created_at'>): Promise<PrizeConfiguration> {
-    const data = await pgRequest<any[]>(TABLES.prize_configurations, {
-      method: 'POST',
-      body: JSON.stringify(prize),
-    });
-    return data[0];
-  },
-};
-
-export const userApi = {
-  async getProfile(userId: string): Promise<UserProfile | null> {
-    const data = await pgRequest<any[]>(`${TABLES.user_profiles}?id=eq.${userId}&limit=1`);
-    return data[0] || null;
-  },
-
-  async getAllSellers(): Promise<UserProfile[]> {
-    const data = await pgRequest<any[]>(`${TABLES.user_profiles}?role=in.(seller,admin)&is_active=eq.true`);
-    return data;
-  },
-};
-
-export const scheduleApi = {
-  async getByLottery(lotteryId: string): Promise<LotterySchedule[]> {
-    const data = await pgRequest<any[]>(`${TABLES.lottery_schedules}?lottery_id=eq.${lotteryId}&is_active=eq.true`);
-    return data;
-  },
-
-  async create(schedule: Omit<LotterySchedule, 'id' | 'created_at'>): Promise<LotterySchedule> {
-    const data = await pgRequest<any[]>(TABLES.lottery_schedules, {
-      method: 'POST',
-      body: JSON.stringify(schedule),
-    });
-    return data[0];
-  },
+  async getByLottery(lotteryId: string) { return fetchApi<Array<any>>(`${API_BASE}/lotteries/${lotteryId}/prizes`); },
 };
 
 export const reportsApi = {
-  async getSalesSummary(): Promise<SalesSummary> {
-    const data = await pgRequest<any>(`rpc/get_sales_summary`);
-    return data || { total_sales: 0, total_tickets: 0, total_revenue: 0, by_lottery: [], by_seller: [] };
-  },
-
-  async getSalesByUser(): Promise<SalesByUser[]> {
-    const data = await pgRequest<any[]>(`rpc/get_sales_by_user`);
-    return data || [];
-  },
+  async getSalesSummary() { return fetchApi<any>(`${API_BASE}/reports/sales-summary`); },
 };
 
-export async function validateTicketSale(lotteryId: string, quantity: number): Promise<{ valid: boolean; error?: string }> {
-  const lottery = await lotteryApi.getById(lotteryId);
+export const userApi = {
+  async getAllSellers() { return fetchApi<Array<any>>(`${API_BASE}/users/sellers`); },
+  async getAll() { return fetchApi<Array<any>>(`${API_BASE}/users`); },
+  async create(data: any) { return fetchApi<any>(`${API_BASE}/users`, { method: 'POST', body: JSON.stringify(data) }); },
+  async update(id: string, data: any) { return fetchApi<any>(`${API_BASE}/users/${id}`, { method: 'PATCH', body: JSON.stringify(data) }); },
+};
 
-  if (!lottery) return { valid: false, error: 'Lotería no encontrada' };
-  if (lottery.status !== 'active') return { valid: false, error: 'Lotería no está activa' };
-  if (lottery.sold_tickets + quantity > lottery.max_tickets) {
-    return { valid: false, error: `Solo quedan ${lottery.max_tickets - lottery.sold_tickets} boletos disponibles` };
-  }
+export const resultsApi = {
+  async getAll(params?: { lottery_id?: string; draw_date?: string }) {
+    const q = new URLSearchParams();
+    if (params?.lottery_id) q.set('lottery_id', params.lottery_id);
+    if (params?.draw_date) q.set('draw_date', params.draw_date);
+    const suffix = q.toString() ? `?${q.toString()}` : '';
+    return fetchApi<Array<any>>(`${API_BASE}/results${suffix}`);
+  },
+  async create(data: any) { return fetchApi<any>(`${API_BASE}/results`, { method: 'POST', body: JSON.stringify(data) }); },
+  async update(id: string, data: any) { return fetchApi<any>(`${API_BASE}/results/${id}`, { method: 'PATCH', body: JSON.stringify(data) }); },
+  async getWinners(id: string) { return fetchApi<any>(`${API_BASE}/results/${id}/winners`); },
+  async sync(draw_date?: string) { return fetchApi<any>(`${API_BASE}/results/sync`, { method: 'POST', body: JSON.stringify({ draw_date }) }); },
+};
 
-  return { valid: true };
-}
+export const prizesApi = {
+  async getAll(status?: string) {
+    const suffix = status ? `?status=${encodeURIComponent(status)}` : '';
+    return fetchApi<Array<any>>(`${API_BASE}/prizes${suffix}`);
+  },
+  async markPaid(id: string) { return fetchApi<any>(`${API_BASE}/prizes/${id}`, { method: 'PATCH', body: JSON.stringify({ status: 'paid' }) }); },
+};

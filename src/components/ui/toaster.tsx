@@ -1,32 +1,22 @@
-'use client';
-
-import { useToast } from '../../hooks/use-toast';
-import {
-  Toast,
-  ToastClose,
-  ToastDescription,
-  ToastProvider,
-  ToastTitle,
-  ToastViewport,
-} from './toast';
+import { useToast } from '@/hooks/use-toast';
+import { useEffect, useRef } from 'react';
 
 export function Toaster() {
   const { toasts } = useToast();
+  const containerRef = useRef<HTMLDivElement>(null);
 
   return (
-    <ToastProvider>
-      {toasts.map(function ({ id, title, description, variant, ...props }) {
-        return (
-          <Toast key={id} variant={variant} {...props}>
-            <div className="grid gap-1">
-              {title && <ToastTitle>{title}</ToastTitle>}
-              {description && <ToastDescription>{description}</ToastDescription>}
-            </div>
-            <ToastClose />
-          </Toast>
-        );
-      })}
-      <ToastViewport />
-    </ToastProvider>
+    <div ref={containerRef} className="fixed top-4 right-4 z-[100] flex flex-col gap-2">
+      {toasts.map((toast) => (
+        <div key={toast.id} className={`rounded-md border p-4 shadow-lg ${
+          toast.variant === 'destructive' ? 'bg-destructive text-destructive-foreground' :
+          toast.variant === 'success' ? 'bg-green-600 text-white' :
+          'bg-background'
+        }`}>
+          <p className="font-medium">{toast.title}</p>
+          {toast.description && <p className="text-sm">{toast.description}</p>}
+        </div>
+      ))}
+    </div>
   );
 }

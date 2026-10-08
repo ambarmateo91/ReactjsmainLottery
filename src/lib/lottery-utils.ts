@@ -24,15 +24,19 @@ export async function getNextDrawDate(_lotteryId: string): Promise<Date | null> 
 }
 
 export async function validateTicketSale(lotteryId: string, quantity: number): Promise<{ valid: boolean; error?: string }> {
-  const { data: lottery } = await fetch(`/api/lotteries/${lotteryId}`).then(r => r.json()).catch(() => ({ data: null }));
-  
-  if (!lottery) return { valid: false, error: 'Lotería no encontrada' };
-  if (lottery.status !== 'active') return { valid: false, error: 'Lotería no está activa' };
-  if (lottery.soldTickets + quantity > lottery.maxTickets) {
-    return { valid: false, error: `Solo quedan ${lottery.maxTickets - lottery.soldTickets} boletos disponibles` };
-  }
+  try {
+    const lottery = await lotteryApi.getById(lotteryId);
 
-  return { valid: true };
+    if (!lottery) return { valid: false, error: 'Lotería no encontrada' };
+    if (lottery.status !== 'active') return { valid: false, error: 'Lotería no está activa' };
+    if (lottery.max_tickets > 0 && lottery.sold_tickets + quantity > lottery.max_tickets) {
+      return { valid: false, error: `Solo quedan ${lottery.max_tickets - lottery.sold_tickets} boletos disponibles` };
+    }
+
+    return { valid: true };
+  } catch {
+    return { valid: false, error: 'Error al validar la lotería' };
+  }
 }
 
 export function calculateCommission(amount: number, rate: number = 0.1): number {

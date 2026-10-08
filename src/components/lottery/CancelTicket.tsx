@@ -69,7 +69,7 @@ export function CancelTicket() {
       try {
         const lottery = await lotteryApi.getById(result.lottery_id);
         lotteryName = lottery?.name || '';
-      } catch {}
+      } catch { /* lottery name optional */ }
 
       setTicket({
         ...result,
@@ -113,14 +113,14 @@ export function CancelTicket() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <AlertTriangle className="h-5 w-5 text-destructive" />
-          Cancelar Boleto
+          Cancelar Ticket
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         {!ticket ? (
           <form onSubmit={handleSubmit(searchTicket)} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="ticketNumber">Número de Boleto *</Label>
+              <Label htmlFor="ticketNumber">Número de Ticket *</Label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -143,7 +143,7 @@ export function CancelTicket() {
               ) : (
                 <>
                   <Search className="mr-2 h-4 w-4" />
-                  Buscar Boleto
+                  Buscar
                 </>
               )}
             </Button>

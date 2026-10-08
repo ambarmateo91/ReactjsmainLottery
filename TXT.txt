@@ -1,0 +1,30 @@
+1. Backend → Web Service
+New → Web Service → conecta tu repo de GitHub.
+Configura:
+Root Directory: backend
+Build Command: npm install
+Start Command: node src/index.js
+Plan Free (o el que uses).
+En Environment Variables agrega:
+DATABASE_URL = postgres://avnadmin:AVNS_OexP69ojjiJ7g3mdcB_@pg-2505637a-banca25-26.e.aivencloud.com:12706/defaultdb?sslmode=require
+JWT_SECRET = (el de tu backend/.env)
+JWT_REFRESH_SECRET = (el de tu backend/.env)
+JWT_EXPIRES_IN = 12h
+JWT_REFRESH_EXPIRES_IN = 7d
+(PORT lo pone Render solo.)
+Deploy → verifica https://tu-backend.onrender.com/api/health → {"ok":true}.
+2. Frontend → Static Site
+New → Static Site → mismo repo.
+Configura:
+Build Command: npm install && npm run build
+Publish Directory: dist
+En Environment agrega (se incrustan al compilar):
+VITE_APP_URL = https://tu-frontend.onrender.com
+En Redirects/Rewrites → Add Rule (en este orden):
+Source /api/* → Destination https://tu-backend.onrender.com/api/:splat → Rewrite (así /api llega al backend sin CORS)
+Source /* → Destination /index.html → Rewrite (para que react-router funcione al recargar)
+Deploy → abre la URL y entra con am202526 / ambar2k9.
+Ojo con esto
+Aiven firewall: si tu proyecto Aiven tiene lista de IPs permitidas, agrega las IPs de salida de Render (o abre temporalmente) o el backend dará timeout a la BD.
+Plan Free: el backend se duerme por inactividad; la primera petición tarda ~50s en despertar.
+Cada vez que cambies variables VITE_*, haz Manual Deploy → Clear build cache & deploy en el Static Site.

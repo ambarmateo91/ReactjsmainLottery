@@ -1,57 +1,7 @@
 import type { AuthUser, Session, LoginCredentials, RegisterData } from '../types/auth';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-
-const API_BASE = '/api';
-
-async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const response = await fetch(`${API_BASE}${endpoint}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
-    ...options,
-  });
-
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`API error: ${response.status} - ${error}`);
-  }
-
-  if (response.status === 204) {
-    return null as T;
-  }
-
-  return response.json();
-}
-
-export const authApi = {
-  async login(credentials: LoginCredentials) {
-    return fetchApi<{ user: AuthUser; session: Session }>('/auth/login', {
-      method: 'POST',
-      body: JSON.stringify(credentials),
-    });
-  },
-
-  async register(data: RegisterData) {
-    return fetchApi<{ user: AuthUser; session: Session }>('/auth/register', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  },
-
-  async logout() {
-    return fetchApi<void>('/auth/logout', { method: 'POST' });
-  },
-
-  async refresh() {
-    return fetchApi<{ user: AuthUser; session: Session }>('/auth/refresh', { method: 'POST' });
-  },
-
-  async getCurrentUser() {
-    return fetchApi<AuthUser>('/auth/me');
-  },
-};
+import { authApi } from './api';
 
 interface AuthState {
   user: AuthUser | null;
@@ -131,17 +81,29 @@ export const useAuthStore = create<AuthState>()(
   )
 );
 
-export const initializeAuth = async () => {
-  try {
-    const user = await authApi.getCurrentUser();
-    if (user) {
-      const session = { access_token: '', refresh_token: '', expires_at: 0, user } as any;
-      useAuthStore.getState().setUser(user);
-      useAuthStore.getState().setSession(session);
-    }
-  } catch {
-    // No session
-  } finally {
-    useAuthStore.setState({ loading: false });
+let initPromise: Promise<void> | null = null;
+let initialized = false;
+
+export const initializeAuth = () => {
+  if (initialized) return Promise.resolve();
+  if (!initPromise) {
+    initPromise = (async () => {
+      try {
+        const user = await authApi.getCurrentUser();
+        if (user) {
+          const session = { access_token: '', refresh_token: '', expires_at: 0, user } as any;
+          useAuthStore.getState().setUser(user);
+          useAuthStore.getState().setSession(session);
+        }
+      } catch {
+        // No session
+      } finally {
+        useAuthStore.setState({ loading: false });
+        initialized = true;
+      }
+    })().finally(() => {
+      initPromise = null;
+    });
   }
+  return initPromise;
 };

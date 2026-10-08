@@ -29,14 +29,14 @@ export function Dashboard() {
           isAdmin ? userApi.getAllSellers() : Promise.resolve([]),
         ]);
 
-        setRecentLotteries(lotteries.slice(0, 5));
+        setRecentLotteries(Array.isArray(lotteries) ? lotteries.slice(0, 5) : []);
 
         if (isAdmin) {
           setStats({
             totalSales: salesSummary.total_sales,
             totalTickets: salesSummary.total_tickets,
             totalRevenue: salesSummary.total_revenue,
-            activeUsers: sellers.length,
+            activeUsers: Array.isArray(sellers) ? sellers.length : 0,
           });
         } else {
           setStats({
@@ -54,7 +54,7 @@ export function Dashboard() {
     };
 
     loadData();
-  }, []);
+  }, [isAdmin]);
 
   if (loading) {
     return (
@@ -110,7 +110,7 @@ export function Dashboard() {
                           {lottery.sold_tickets} / {lottery.max_tickets}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          {Math.round((lottery.sold_tickets / lottery.max_tickets) * 100)}%
+                          {lottery.max_tickets > 0 ? `${Math.round((lottery.sold_tickets / lottery.max_tickets) * 100)}%` : '—'}
                         </p>
                       </div>
                     </div>
@@ -136,7 +136,7 @@ export function Dashboard() {
                     <span className="text-primary">💳</span>
                   </span>
                   <div>
-                    <p className="font-medium">Vender Boletos</p>
+                    <p className="font-medium">Vender Tickets</p>
                     <p className="text-sm text-muted-foreground">Vender nuevos boletos</p>
                   </div>
                 </a>
