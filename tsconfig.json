@@ -7,26 +7,6 @@
     "skipLibCheck": true,
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
-<<<<<<< HEAD
-    "isolatedModules": true,
-    "moduleDetection": "force",
-    "noEmit": true,
-    "strict": false,
-    "noUnusedLocals": false,
-    "noUnusedParameters": false,
-    "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true,
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "resolveJsonModule": true,
-    "paths": {
-      "@/*": ["./src/*"]
-    },
-    "baseUrl": "."
-  },
-  "include": ["src"]
-}
-=======
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
@@ -43,4 +23,3 @@
   "include": ["src"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }
->>>>>>> 808fceb10c25f8fd236d4714458443967c517186

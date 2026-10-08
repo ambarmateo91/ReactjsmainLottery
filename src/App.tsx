@@ -1,5 +1,4 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { Toaster } from '@/components/ui/toaster';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Login } from '@/pages/Login';
 import { Dashboard } from '@/pages/Dashboard';
@@ -133,7 +132,6 @@ export function App() {
         } />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-      <Toaster />
     </BrowserRouter>
   );
 }
