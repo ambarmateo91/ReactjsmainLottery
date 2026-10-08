@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Logs
 *.log
 npm-debug.log*
@@ -52,3 +53,6 @@ pnpm-debug.log*
 # Temp
 tmp/
 temp/
+=======
+node_modules
+>>>>>>> 808fceb10c25f8fd236d4714458443967c517186

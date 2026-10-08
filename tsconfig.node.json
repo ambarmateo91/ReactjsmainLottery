@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+<<<<<<< HEAD
     "target": "ES2022",
     "lib": ["ES2023"],
     "module": "ESNext",
@@ -16,6 +17,14 @@
     "noUncheckedSideEffectImports": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true
+=======
+    "composite": true,
+    "skipLibCheck": true,
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowSyntheticDefaultImports": true,
+    "strict": true
+>>>>>>> 808fceb10c25f8fd236d4714458443967c517186
   },
   "include": [],
   "exclude": ["node_modules", "dist"]
