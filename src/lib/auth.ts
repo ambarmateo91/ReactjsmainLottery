@@ -50,10 +50,10 @@ export const useAuthStore = create<AuthState>()(
         set({ loading: true });
         try {
           await authApi.logout();
-          set({ user: null, session: null, loading: false });
-        } catch (error) {
-          set({ error: error instanceof Error ? error.message : 'Error al cerrar sesión', loading: false });
-          throw error;
+        } catch {
+          // Aunque falle el backend, limpiar sesión local igualmente
+        } finally {
+          set({ user: null, session: null, loading: false, error: null });
         }
       },
 
@@ -91,12 +91,16 @@ export const initializeAuth = () => {
       try {
         const user = await authApi.getCurrentUser();
         if (user) {
-          const session = { access_token: '', refresh_token: '', expires_at: 0, user } as any;
+          // Conservar la sesión persistida (con sus tokens); solo refrescar el usuario
           useAuthStore.getState().setUser(user);
-          useAuthStore.getState().setSession(session);
         }
-      } catch {
-        // No session
+      } catch (err) {
+        // Solo limpiar si el token fue rechazado (401/403). Errores de red/timeout
+        // no deben borrar la sesión persistida.
+        const msg = err instanceof Error ? err.message : '';
+        if (/API 40[13]/.test(msg)) {
+          useAuthStore.setState({ user: null, session: null });
+        }
       } finally {
         useAuthStore.setState({ loading: false });
         initialized = true;

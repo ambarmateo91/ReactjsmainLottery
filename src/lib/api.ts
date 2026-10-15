@@ -1,13 +1,35 @@
 import type { AuthUser, Session, LoginCredentials, RegisterData } from '../types/auth';
 
-const API_BASE = '/api';
+const API_BASE = ((import.meta.env.VITE_API_URL as string) || '/api').replace(/\/+$/, '');
+
+function getStoredSession(): Session | null {
+  try {
+    const raw = localStorage.getItem('lottery-auth');
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    // zustand/persist guarda { state: { user, session }, version }
+    return (parsed?.state?.session || parsed?.session || null) as Session | null;
+  } catch {
+    return null;
+  }
+}
+
+function buildHeaders(hasBody: boolean, extra?: HeadersInit, skipAuth = false): HeadersInit {
+  const headers: Record<string, string> = { ...(extra as Record<string, string>) };
+  if (hasBody && !headers['Content-Type']) headers['Content-Type'] = 'application/json';
+  if (!skipAuth) {
+    const session = getStoredSession();
+    if (session?.access_token) headers['Authorization'] = `Bearer ${session.access_token}`;
+  }
+  return headers;
+}
 
 export const authApi = {
   async login(credentials: LoginCredentials) {
     return fetchApi<{ user: AuthUser; session: Session }>(`${API_BASE}/auth/login`, {
       method: 'POST',
       body: JSON.stringify(credentials),
-    });
+    }, true);
   },
   async logout() {
     return fetchApi<void>(`${API_BASE}/auth/logout`, { method: 'POST' });
@@ -16,25 +38,30 @@ export const authApi = {
     return fetchApi<{ user: AuthUser; session: Session }>(`${API_BASE}/auth/register`, {
       method: 'POST',
       body: JSON.stringify(data),
-    });
+    }, true);
   },
   async refresh() {
-    return fetchApi<{ user: AuthUser; session: Session }>(`${API_BASE}/auth/refresh`, { method: 'POST' });
+    const session = getStoredSession();
+    if (!session?.refresh_token) throw new Error('Sin refresh_token en sesión local');
+    return fetchApi<{ user: AuthUser; session: Session }>(`${API_BASE}/auth/refresh`, {
+      method: 'POST',
+      body: JSON.stringify({ refresh_token: session.refresh_token }),
+    }, true);
   },
   async getCurrentUser() {
     return fetchApi<AuthUser>(`${API_BASE}/auth/me`);
   },
 };
 
-async function fetchApi<T>(url: string, options: RequestInit = {}): Promise<T> {
+async function fetchApi<T>(url: string, options: RequestInit = {}, skipAuth = false): Promise<T> {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 5000);
+  const timeoutId = setTimeout(() => controller.abort(), 15000);
 
   try {
     const hasBody = options.body !== undefined && options.body !== null;
     const response = await fetch(url, {
       ...options,
-      headers: { ...(hasBody ? { 'Content-Type': 'application/json' } : {}), ...options.headers },
+      headers: buildHeaders(hasBody, options.headers, skipAuth),
       signal: controller.signal,
     });
     clearTimeout(timeoutId);
@@ -47,6 +74,9 @@ async function fetchApi<T>(url: string, options: RequestInit = {}): Promise<T> {
     return (text ? JSON.parse(text) : null) as T;
   } catch (error) {
     clearTimeout(timeoutId);
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw new Error(`Timeout llamando ${url} (15s). Revisa que el backend esté encendido.`);
+    }
     throw error;
   }
 }

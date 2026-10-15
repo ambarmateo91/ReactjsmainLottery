@@ -35,11 +35,16 @@ export function Login() {
   const onSubmit = async (data: LoginForm) => {
     setLoading(true);
     try {
-      await signIn({ username: data.username ?? '', password: data.password ?? '' });
+      const username = data.username.trim();
+      await signIn({ username, password: data.password ?? '' });
       toast({ title: 'Bienvenido', description: 'Inicio de sesión exitoso', variant: 'success' });
       navigate('/');
     } catch (error) {
-      toast({ title: 'Error', description: 'Credenciales inválidas', variant: 'destructive' });
+      const msg = error instanceof Error ? error.message : '';
+      const description = /API 40[13]/.test(msg)
+        ? 'Credenciales inválidas'
+        : msg || 'No se pudo conectar con el servidor';
+      toast({ title: 'Error', description, variant: 'destructive' });
     } finally {
       setLoading(false);
     }
