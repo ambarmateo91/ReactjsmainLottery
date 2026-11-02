@@ -6,6 +6,7 @@ import { DashboardStats } from '@/components/dashboard/StatsCards';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { reportsApi, userApi } from '@/lib/api';
 import { getActiveLotteries } from '@/lib/lottery-utils';
+import type { Lottery } from '@/types/lottery';
 import { Ticket, TrendingUp } from 'lucide-react';
 
 export function Dashboard() {
@@ -17,7 +18,7 @@ export function Dashboard() {
     totalRevenue: 0,
     activeUsers: 0,
   });
-  const [recentLotteries, setRecentLotteries] = useState<Array<{ id: string; name: string; sold_tickets: number; max_tickets: number; draw_date: string }>>([]);
+  const [recentLotteries, setRecentLotteries] = useState<Lottery[]>([]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -103,6 +104,12 @@ export function Dashboard() {
                         <p className="font-medium">{lottery.name}</p>
                         <p className="text-sm text-muted-foreground">
                           Sorteo: {new Date(lottery.draw_date).toLocaleDateString('es-ES')}
+                          {lottery.closing_time ? ` · Cierre: ${lottery.closing_time}` : ''}
+                          {lottery.is_closed ? (
+                            <span className="ml-2 rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-semibold text-white">
+                              Cerrada
+                            </span>
+                          ) : null}
                         </p>
                       </div>
                       <div className="text-right">

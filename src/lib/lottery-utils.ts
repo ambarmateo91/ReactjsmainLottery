@@ -1,8 +1,11 @@
 import { lotteryApi, prizeApi } from '../lib/api';
 import type { Lottery } from '../types/lottery';
 
+/** Loterías disponibles para vender: solo activas. */
 export async function getActiveLotteries(): Promise<Lottery[]> {
-  return lotteryApi.getAll();
+  const all = await lotteryApi.getAll();
+  if (!Array.isArray(all)) return [];
+  return all.filter((lottery) => lottery.status === 'active');
 }
 
 export async function getLotteryWithDetails(lotteryId: string) {
@@ -29,6 +32,12 @@ export async function validateTicketSale(lotteryId: string, quantity: number): P
 
     if (!lottery) return { valid: false, error: 'Lotería no encontrada' };
     if (lottery.status !== 'active') return { valid: false, error: 'Lotería no está activa' };
+    if (lottery.is_closed) {
+      return {
+        valid: false,
+        error: `Ventas cerradas para esta lotería. Hora de cierre: ${lottery.closing_time || ''}`.trim(),
+      };
+    }
     if (lottery.max_tickets > 0 && lottery.sold_tickets + quantity > lottery.max_tickets) {
       return { valid: false, error: `Solo quedan ${lottery.max_tickets - lottery.sold_tickets} boletos disponibles` };
     }

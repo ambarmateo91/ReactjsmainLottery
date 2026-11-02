@@ -67,12 +67,23 @@ const sellSchema = z
 
 type SellForm = z.infer<typeof sellSchema>;
 
+interface LotteryOption {
+  id: string;
+  name: string;
+  price: number;
+  max_tickets: number;
+  sold_tickets: number;
+  closing_time?: string | null;
+  schedule_day?: string | number | null;
+  is_closed?: boolean;
+}
+
 export function SellTicket() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [lotteries, setLotteries] = useState<Array<{ id: string; name: string; price: number; max_tickets: number; sold_tickets: number }>>([]);
+  const [lotteries, setLotteries] = useState<LotteryOption[]>([]);
   const [loading, setLoading] = useState(false);
-  const [selectedLottery, setSelectedLottery] = useState<{ id: string; name: string; price: number; max_tickets: number; sold_tickets: number } | null>(null);
+  const [selectedLottery, setSelectedLottery] = useState<LotteryOption | null>(null);
   const [autoPrint, setAutoPrint] = useState(true);
 
   const {
@@ -185,7 +196,11 @@ export function SellTicket() {
         }
       }
     } catch (error) {
-      toast({ title: 'Error', description: 'No se pudo vender el boleto', variant: 'destructive' });
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'No se pudo vender el boleto',
+        variant: 'destructive',
+      });
     } finally {
       setLoading(false);
     }
@@ -211,8 +226,10 @@ export function SellTicket() {
               </SelectTrigger>
               <SelectContent>
                 {lotteries.map(lottery => (
-                  <SelectItem key={lottery.id} value={lottery.id}>
+                  <SelectItem key={lottery.id} value={lottery.id} disabled={lottery.is_closed}>
                     {lottery.name}
+                    {lottery.closing_time ? ` · cierra ${lottery.closing_time}` : ''}
+                    {lottery.is_closed ? ' (Cerrada)' : ''}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -275,6 +292,17 @@ export function SellTicket() {
                 <span>Vendidos:</span>
                 <span>{selectedLottery.sold_tickets}</span>
               </div>
+              {selectedLottery.closing_time && (
+                <div className="flex justify-between">
+                  <span>Hora de cierre:</span>
+                  <span className="font-semibold">{selectedLottery.closing_time}</span>
+                </div>
+              )}
+              {selectedLottery.is_closed && (
+                <p className="text-sm font-medium text-red-500">
+                  Esta lotería ya cerró sus ventas por hoy.
+                </p>
+              )}
             </div>
           )}
 
@@ -298,7 +326,12 @@ export function SellTicket() {
         </form>
       </CardContent>
       <CardFooter className="flex justify-end">
-        <Button type="submit" form="sell-form" disabled={loading || !selectedLottery} className="w-full sm:w-auto">
+        <Button
+          type="submit"
+          form="sell-form"
+          disabled={loading || !selectedLottery || selectedLottery.is_closed}
+          className="w-full sm:w-auto"
+        >
           {loading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />

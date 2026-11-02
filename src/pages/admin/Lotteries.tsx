@@ -6,8 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { lotteryApi } from '@/lib/api';
-import { Plus, Pencil, Power } from 'lucide-react';
+import { Plus, Pencil, Power, Clock } from 'lucide-react';
 
 interface LotteryRow {
   id: string;
@@ -18,6 +19,43 @@ interface LotteryRow {
   status: string;
   sold_tickets: number;
   max_tickets: number;
+  closing_time?: string | null;
+  schedule_day?: string | number | null;
+  is_closed?: boolean;
+}
+
+const DAY_LABELS: Record<string, string> = {
+  daily: 'Diario',
+  monday: 'Lunes',
+  tuesday: 'Martes',
+  wednesday: 'Miércoles',
+  thursday: 'Jueves',
+  friday: 'Viernes',
+  saturday: 'Sábado',
+  sunday: 'Domingo',
+  '0': 'Domingo',
+  '1': 'Lunes',
+  '2': 'Martes',
+  '3': 'Miércoles',
+  '4': 'Jueves',
+  '5': 'Viernes',
+  '6': 'Sábado',
+  '7': 'Diario',
+};
+
+const DAY_NAMES = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+
+function dayLabel(day?: string | number | null) {
+  if (day == null || day === '') return 'Diario';
+  return DAY_LABELS[String(day).toLowerCase()] || String(day);
+}
+
+/** Convierte 0-6 a nombre de día para el selector. */
+function toDayOption(day?: string | number | null) {
+  if (day == null || day === '') return 'daily';
+  const value = String(day).toLowerCase();
+  if (/^\d+$/.test(value)) return DAY_NAMES[Number(value)] || 'daily';
+  return value;
 }
 
 export function AdminLotteries() {
@@ -27,6 +65,8 @@ export function AdminLotteries() {
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
   const [description, setDescription] = useState('');
+  const [closingTime, setClosingTime] = useState('18:00');
+  const [scheduleDay, setScheduleDay] = useState('daily');
   const [editingId, setEditingId] = useState<string | null>(null);
 
   const load = async () => {
@@ -50,6 +90,8 @@ export function AdminLotteries() {
     setName('');
     setCode('');
     setDescription('');
+    setClosingTime('18:00');
+    setScheduleDay('daily');
     setEditingId(null);
   };
 
@@ -60,12 +102,31 @@ export function AdminLotteries() {
       return;
     }
     try {
+      let lotteryId = editingId;
       if (editingId) {
         await lotteryApi.update(editingId, { name: name.trim(), code: code.trim() || null, description: description.trim() || null });
         toast({ title: 'OK', description: 'Lotería actualizada', variant: 'success' });
       } else {
-        await lotteryApi.create({ name: name.trim(), code: code.trim() || null, description: description.trim() || null });
+        const created = await lotteryApi.create({ name: name.trim(), code: code.trim() || null, description: description.trim() || null });
         toast({ title: 'OK', description: 'Lotería creada', variant: 'success' });
+        lotteryId = created.id;
+      }
+      // Crear o actualizar el horario de cierre (sin duplicar al editar)
+      if (lotteryId) {
+        try {
+          await lotteryApi.upsertSchedule(lotteryId, {
+            draw_time: closingTime,
+            day_of_week: scheduleDay,
+            is_active: true,
+          });
+        } catch (schedErr) {
+          console.warn('No se pudo guardar el horario:', schedErr);
+          toast({
+            title: 'Aviso',
+            description: 'La lotería se guardó, pero no se pudo guardar el horario de cierre',
+            variant: 'destructive',
+          });
+        }
       }
       resetForm();
       load();
@@ -84,11 +145,24 @@ export function AdminLotteries() {
     }
   };
 
-  const startEdit = (row: LotteryRow) => {
+  const startEdit = async (row: LotteryRow) => {
     setEditingId(row.id);
     setName(row.name || '');
     setCode(row.code || '');
     setDescription(row.description || '');
+    // Cargar horario existente si hay
+    setClosingTime(row.closing_time?.slice(0, 5) || '18:00');
+    setScheduleDay(toDayOption(row.schedule_day));
+    try {
+      const schedules = await lotteryApi.getSchedules(row.id);
+      if (schedules?.length) {
+        const s = schedules[0];
+        setClosingTime(s.draw_time?.slice(0, 5) || '18:00');
+        setScheduleDay(toDayOption(s.day_of_week));
+      }
+    } catch {
+      // Se mantienen los valores que ya trae la fila
+    }
   };
 
   return (
@@ -119,6 +193,37 @@ export function AdminLotteries() {
               <Label htmlFor="lot-desc">Descripción</Label>
               <Input id="lot-desc" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Sorteo ..." />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="lot-close-time">Hora de cierre (sorteo) *</Label>
+              <div className="relative">
+                <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="lot-close-time"
+                  type="time"
+                  value={closingTime}
+                  onChange={(e) => setClosingTime(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="lot-schedule-day">Día del sorteo</Label>
+              <Select value={scheduleDay} onValueChange={setScheduleDay}>
+                <SelectTrigger id="lot-schedule-day" className="w-full">
+                  <SelectValue placeholder="Seleccionar día" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="daily">Diario</SelectItem>
+                  <SelectItem value="monday">Lunes</SelectItem>
+                  <SelectItem value="tuesday">Martes</SelectItem>
+                  <SelectItem value="wednesday">Miércoles</SelectItem>
+                  <SelectItem value="thursday">Jueves</SelectItem>
+                  <SelectItem value="friday">Viernes</SelectItem>
+                  <SelectItem value="saturday">Sábado</SelectItem>
+                  <SelectItem value="sunday">Domingo</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div className="flex gap-2 md:col-span-2">
               <Button type="submit">{editingId ? 'Guardar cambios' : 'Crear lotería'}</Button>
               {editingId && (
@@ -145,6 +250,7 @@ export function AdminLotteries() {
                   <tr className="text-left border-b">
                     <th className="p-2">Nombre</th>
                     <th className="p-2">Código</th>
+                    <th className="p-2">Cierre</th>
                     <th className="p-2">Estado</th>
                     <th className="p-2 text-right">Vendidos</th>
                     <th className="p-2 text-right">Acciones</th>
@@ -155,6 +261,22 @@ export function AdminLotteries() {
                     <tr key={row.id} className="border-b">
                       <td className="p-2 font-medium">{row.name}</td>
                       <td className="p-2">{row.code || '—'}</td>
+                      <td className="p-2">
+                        {row.closing_time ? (
+                          <span className="inline-flex items-center gap-1">
+                            <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                            {row.closing_time}
+                            <span className="text-muted-foreground">({dayLabel(row.schedule_day)})</span>
+                            {row.is_closed && (
+                              <span className="ml-1 rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-semibold text-white">
+                                Cerrada
+                              </span>
+                            )}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </td>
                       <td className="p-2">
                         <span
                           className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${

@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { pool } from '../db.js';
+import { getNextDrawDate, getScheduleState, toTimeString } from '../lib/schedule.js';
 
 function mapTicket(row) {
   if (!row) return null;
@@ -101,12 +102,34 @@ router.post('/', async (req, res) => {
     return res.status(400).json({ error: 'lottery_id, ticket_number y seller_id requeridos' });
   }
   try {
-    const lot = await pool.query('SELECT id, is_active FROM lotteries WHERE id = $1', [Number(lottery_id)]);
+    const lot = await pool.query(
+      `SELECT l.id, l.is_active, s.draw_time, s.day_of_week
+       FROM lotteries l
+       LEFT JOIN LATERAL (
+         SELECT ls.draw_time, ls.day_of_week
+         FROM lottery_schedules ls
+         WHERE ls.lottery_id = l.id AND ls.is_active = true
+         ORDER BY ls.draw_time ASC
+         LIMIT 1
+       ) s ON true
+       WHERE l.id = $1`,
+      [Number(lottery_id)]
+    );
     if (!lot.rows[0]) return res.status(404).json({ error: 'Lotería no encontrada' });
     if (lot.rows[0].is_active === false) return res.status(400).json({ error: 'Lotería no está activa' });
+
+    const schedule = lot.rows[0];
+    const state = getScheduleState(schedule);
+    if (state.closed) {
+      return res.status(400).json({
+        error: `Ventas cerradas para esta lotería. Hora de cierre: ${state.closing_time}`,
+      });
+    }
+
+    const drawDate = getNextDrawDate(schedule);
     const { rows } = await pool.query(
       `INSERT INTO tickets (lottery_id, ticket_number, user_id, play_type, numbers, amount, status, draw_date)
-       VALUES ($1, $2, $3, $4, $5, $6, 'active', CURRENT_DATE) RETURNING *`,
+       VALUES ($1, $2, $3, $4, $5, $6, 'active', $7) RETURNING *`,
       [
         Number(lottery_id),
         ticket_number,
@@ -114,13 +137,14 @@ router.post('/', async (req, res) => {
         play_type || 'quiniela',
         JSON.stringify(parseNumbers(numbers)),
         amount != null ? Number(amount) : 0,
+        drawDate,
       ]
     );
-    const sch = await pool.query(
-      `SELECT draw_time FROM lottery_schedules WHERE lottery_id = $1 AND is_active ORDER BY draw_time LIMIT 1`,
-      [Number(lottery_id)]
-    );
-    return res.status(201).json({ ...mapTicket(rows[0]), draw_time: sch.rows[0]?.draw_time || null });
+    return res.status(201).json({
+      ...mapTicket(rows[0]),
+      draw_date: drawDate,
+      draw_time: toTimeString(schedule.draw_time),
+    });
   } catch (err) {
     console.error('ticket sell error', err);
     if (err?.code === '23505') return res.status(409).json({ error: 'Número de boleto duplicado' });

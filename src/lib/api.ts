@@ -1,6 +1,13 @@
 import type { AuthUser, Session, LoginCredentials, RegisterData } from '../types/auth';
 
-const API_BASE = ((import.meta.env.VITE_API_URL as string) || '/api').replace(/\/+$/, '');
+function resolveApiBase(): string {
+  const raw = ((import.meta.env.VITE_API_URL as string) || '/api').trim().replace(/\/+$/, '');
+  if (!raw || raw === '/api') return '/api';
+  // Acepta tanto el origen (https://back.onrender.com) como la base con /api
+  return raw.endsWith('/api') ? raw : `${raw}/api`;
+}
+
+const API_BASE = resolveApiBase();
 
 function getStoredSession(): Session | null {
   try {
@@ -96,6 +103,18 @@ export const lotteryApi = {
   async create(data: any) { return fetchApi<any>(`${API_BASE}/lotteries`, { method: 'POST', body: JSON.stringify(data) }); },
   async update(id: string, data: any) { return fetchApi<any>(`${API_BASE}/lotteries/${id}`, { method: 'PATCH', body: JSON.stringify(data) }); },
   async getSchedules(id: string) { return fetchApi<Array<any>>(`${API_BASE}/lotteries/${id}/schedules`); },
+  async createSchedule(id: string, data: { draw_time: string; day_of_week?: string | number; is_active?: boolean }) {
+    return fetchApi<any>(`${API_BASE}/lotteries/${id}/schedules`, { method: 'POST', body: JSON.stringify(data) });
+  },
+  async upsertSchedule(id: string, data: { draw_time: string; day_of_week?: string | number; is_active?: boolean }) {
+    return fetchApi<any>(`${API_BASE}/lotteries/${id}/schedule`, { method: 'PUT', body: JSON.stringify(data) });
+  },
+  async updateSchedule(id: string, scheduleId: string, data: { draw_time?: string; day_of_week?: string | number; is_active?: boolean }) {
+    return fetchApi<any>(`${API_BASE}/lotteries/${id}/schedules/${scheduleId}`, { method: 'PATCH', body: JSON.stringify(data) });
+  },
+  async deleteSchedule(id: string, scheduleId: string) {
+    return fetchApi<any>(`${API_BASE}/lotteries/${id}/schedules/${scheduleId}`, { method: 'DELETE' });
+  },
   async createPrizeConfig(lotteryId: string, data: any) { return fetchApi<any>(`${API_BASE}/lotteries/${lotteryId}/prizes`, { method: 'POST', body: JSON.stringify(data) }); },
   async updatePrizeConfig(id: string, data: any) { return fetchApi<any>(`${API_BASE}/lotteries/prize-configurations/${id}`, { method: 'PATCH', body: JSON.stringify(data) }); },
 };

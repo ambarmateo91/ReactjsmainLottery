@@ -7,6 +7,12 @@ export interface Lottery {
   sold_tickets: number;
   status: 'active' | 'inactive' | 'completed';
   draw_date: string;
+  /** Hora de cierre de ventas (HH:MM). */
+  closing_time?: string | null;
+  schedule_id?: string | null;
+  schedule_day?: string | number | null;
+  /** true cuando ya pasó la hora de cierre del día de sorteo. */
+  is_closed?: boolean;
   created_at: string;
   updated_at: string;
 }
