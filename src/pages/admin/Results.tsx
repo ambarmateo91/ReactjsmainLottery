@@ -6,8 +6,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { resultsApi, lotteryApi } from '@/lib/api';
-import { Plus, CheckCircle, Trophy, RefreshCw } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { resultsApi, lotteryApi, apiErrorMessage } from '@/lib/api';
+import { Plus, CheckCircle, Trophy, RefreshCw, Trash2 } from 'lucide-react';
 
 interface ResultRow {
   id: string;
@@ -42,6 +51,8 @@ export function AdminResults() {
   const [third, setThird] = useState('');
   const [notes, setNotes] = useState('');
   const [winners, setWinners] = useState<{ resultId: string; list: Array<any> } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<ResultRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -118,6 +129,34 @@ export function AdminResults() {
       setWinners({ resultId: row.id, list: data.winners || [] });
     } catch {
       toast({ title: 'Error', description: 'No se pudieron cargar ganadores', variant: 'destructive' });
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      const response = await resultsApi.delete(deleteTarget.id);
+      const reverted = Number(response?.winnersReverted || 0);
+      toast({
+        title: 'OK',
+        description: reverted > 0
+          ? `Resultado eliminado y ${reverted} ganador(es) revertido(s)`
+          : 'Resultado eliminado',
+        variant: 'success',
+      });
+      if (winners?.resultId === deleteTarget.id) setWinners(null);
+      setDeleteTarget(null);
+      load();
+    } catch (error) {
+      toast({
+        title: 'No se pudo eliminar',
+        description: apiErrorMessage(error, 'No se pudo eliminar el resultado'),
+        variant: 'destructive',
+      });
+      setDeleteTarget(null);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -263,6 +302,15 @@ export function AdminResults() {
                           <Button type="button" variant="outline" onClick={() => showWinners(row)} title="Ver ganadores">
                             <Trophy className="h-4 w-4" />
                           </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setDeleteTarget(row)}
+                            title="Eliminar"
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
                         {winners?.resultId === row.id && (
                           <div className="mt-2 p-2 bg-muted rounded-lg text-xs">
@@ -287,6 +335,33 @@ export function AdminResults() {
           )}
         </CardContent>
       </Card>
+
+      <AlertDialog open={deleteTarget !== null} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Eliminar resultado</AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Seguro que deseas eliminar el resultado de{' '}
+              <strong>{deleteTarget?.lottery_name || deleteTarget?.lottery_id}</strong> del{' '}
+              <strong>{deleteTarget ? String(deleteTarget.draw_date).slice(0, 10) : ''}</strong>? Esta acción no se
+              puede deshacer y revertirá las marcas de ganador de ese sorteo.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex justify-end gap-2">
+            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(event) => {
+                event.preventDefault();
+                confirmDelete();
+              }}
+              disabled={deleting}
+              className="bg-red-600 text-white hover:bg-red-700"
+            >
+              {deleting ? 'Eliminando...' : 'Eliminar'}
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -193,6 +193,58 @@ router.patch('/:id', async (req, res) => {
   }
 });
 
+/**
+ * Elimina una lotería (mantenimiento).
+ * Protege la información: si tiene tickets vendidos no se elimina, se desactiva.
+ */
+router.delete('/:id', async (req, res) => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const { rows } = await client.query('SELECT id, name FROM lotteries WHERE id = $1 FOR UPDATE', [req.params.id]);
+    if (!rows[0]) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Lotería no encontrada' });
+    }
+
+    const { rows: ticketRows } = await client.query(
+      'SELECT COUNT(*)::int AS count FROM tickets WHERE lottery_id = $1',
+      [req.params.id]
+    );
+    const ticketCount = Number(ticketRows[0]?.count || 0);
+    if (ticketCount > 0) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({
+        error: `No se puede eliminar "${rows[0].name}": tiene ${ticketCount} ticket(s) asociados. Desactívala en su lugar.`,
+      });
+    }
+
+    // Borra registros dependientes (si la tabla existe en este esquema).
+    for (const table of ['prize_configurations', 'prizes', 'lottery_results', 'lottery_schedules']) {
+      try {
+        await client.query(`DELETE FROM ${table} WHERE lottery_id = $1`, [req.params.id]);
+      } catch (err) {
+        if (err?.code !== '42P01') throw err; // 42P01 = tabla inexistente
+      }
+    }
+
+    await client.query('DELETE FROM lotteries WHERE id = $1', [req.params.id]);
+    await client.query('COMMIT');
+    return res.json({ ok: true, message: `Lotería "${rows[0].name}" eliminada` });
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    if (err?.code === '23503') {
+      return res.status(409).json({
+        error: 'No se puede eliminar la lotería porque tiene registros relacionados.',
+      });
+    }
+    console.error('lottery delete error', err);
+    return res.status(500).json({ error: 'Error interno' });
+  } finally {
+    client.release();
+  }
+});
+
 router.get('/:id/schedules', async (req, res) => {
   try {
     const { rows } = await pool.query(

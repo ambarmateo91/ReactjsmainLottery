@@ -7,8 +7,17 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { lotteryApi } from '@/lib/api';
-import { Plus, Pencil, Power, Clock } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { lotteryApi, apiErrorMessage } from '@/lib/api';
+import { Plus, Pencil, Power, Clock, Trash2 } from 'lucide-react';
 
 interface LotteryRow {
   id: string;
@@ -68,6 +77,8 @@ export function AdminLotteries() {
   const [closingTime, setClosingTime] = useState('18:00');
   const [scheduleDay, setScheduleDay] = useState('daily');
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<LotteryRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -142,6 +153,31 @@ export function AdminLotteries() {
       load();
     } catch {
       toast({ title: 'Error', description: 'No se pudo actualizar', variant: 'destructive' });
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await lotteryApi.delete(deleteTarget.id);
+      toast({
+        title: 'OK',
+        description: `Lotería "${deleteTarget.name}" eliminada`,
+        variant: 'success',
+      });
+      if (editingId === deleteTarget.id) resetForm();
+      setDeleteTarget(null);
+      load();
+    } catch (error) {
+      toast({
+        title: 'No se pudo eliminar',
+        description: apiErrorMessage(error, 'No se pudo eliminar la lotería'),
+        variant: 'destructive',
+      });
+      setDeleteTarget(null);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -295,6 +331,15 @@ export function AdminLotteries() {
                           <Button type="button" variant="outline" onClick={() => toggleActive(row)} title={row.status === 'active' ? 'Desactivar' : 'Activar'}>
                             <Power className="h-4 w-4" />
                           </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setDeleteTarget(row)}
+                            title="Eliminar"
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
                       </td>
                     </tr>
@@ -305,6 +350,31 @@ export function AdminLotteries() {
           )}
         </CardContent>
       </Card>
+
+      <AlertDialog open={deleteTarget !== null} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Eliminar lotería</AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Seguro que deseas eliminar <strong>{deleteTarget?.name}</strong>? Esta acción no se puede deshacer.
+              Si la lotería tiene tickets vendidos, no se podrá eliminar; en ese caso desactívala.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex justify-end gap-2">
+            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(event) => {
+                event.preventDefault();
+                confirmDelete();
+              }}
+              disabled={deleting}
+              className="bg-red-600 text-white hover:bg-red-700"
+            >
+              {deleting ? 'Eliminando...' : 'Eliminar'}
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

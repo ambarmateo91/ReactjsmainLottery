@@ -88,6 +88,23 @@ async function fetchApi<T>(url: string, options: RequestInit = {}, skipAuth = fa
   }
 }
 
+/** Extrae el mensaje legible de un error de la API (JSON `{ error: "..." }`). */
+export function apiErrorMessage(error: unknown, fallback = 'Error inesperado'): string {
+  if (!(error instanceof Error)) return fallback;
+  const marker = ' - ';
+  const index = error.message.indexOf(marker);
+  if (index >= 0) {
+    const body = error.message.slice(index + marker.length);
+    try {
+      const parsed = JSON.parse(body);
+      if (parsed && typeof parsed.error === 'string' && parsed.error) return parsed.error;
+    } catch {
+      // El cuerpo no era JSON
+    }
+  }
+  return error.message || fallback;
+}
+
 export const ticketApi = {
   async getAll() { return fetchApi<Array<any>>(`${API_BASE}/tickets`); },
   async getById(id: string) { return fetchApi<any>(`${API_BASE}/tickets/${id}`); },
@@ -102,6 +119,7 @@ export const lotteryApi = {
   async getById(id: string) { return fetchApi<any>(`${API_BASE}/lotteries/${id}`); },
   async create(data: any) { return fetchApi<any>(`${API_BASE}/lotteries`, { method: 'POST', body: JSON.stringify(data) }); },
   async update(id: string, data: any) { return fetchApi<any>(`${API_BASE}/lotteries/${id}`, { method: 'PATCH', body: JSON.stringify(data) }); },
+  async delete(id: string) { return fetchApi<any>(`${API_BASE}/lotteries/${id}`, { method: 'DELETE' }); },
   async getSchedules(id: string) { return fetchApi<Array<any>>(`${API_BASE}/lotteries/${id}/schedules`); },
   async createSchedule(id: string, data: { draw_time: string; day_of_week?: string | number; is_active?: boolean }) {
     return fetchApi<any>(`${API_BASE}/lotteries/${id}/schedules`, { method: 'POST', body: JSON.stringify(data) });
@@ -145,6 +163,7 @@ export const resultsApi = {
   async create(data: any) { return fetchApi<any>(`${API_BASE}/results`, { method: 'POST', body: JSON.stringify(data) }); },
   async update(id: string, data: any) { return fetchApi<any>(`${API_BASE}/results/${id}`, { method: 'PATCH', body: JSON.stringify(data) }); },
   async getWinners(id: string) { return fetchApi<any>(`${API_BASE}/results/${id}/winners`); },
+  async delete(id: string) { return fetchApi<any>(`${API_BASE}/results/${id}`, { method: 'DELETE' }); },
   async sync(draw_date?: string) { return fetchApi<any>(`${API_BASE}/results/sync`, { method: 'POST', body: JSON.stringify({ draw_date }) }); },
 };
 

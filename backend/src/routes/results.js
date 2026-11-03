@@ -120,4 +120,41 @@ router.patch('/:id', async (req, res) => {
   }
 });
 
+/**
+ * Elimina un resultado (mantenimiento).
+ * Revierte las marcas de ganador de los tickets de ese sorteo antes de borrar.
+ */
+router.delete('/:id', async (req, res) => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const { rows } = await client.query(
+      'SELECT * FROM lottery_results WHERE id = $1 FOR UPDATE',
+      [req.params.id]
+    );
+    if (!rows[0]) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Resultado no encontrado' });
+    }
+
+    const result = rows[0];
+    const { rowCount } = await client.query(
+      `UPDATE tickets
+       SET is_winner = false, prize_amount = NULL, updated_at = NOW()
+       WHERE lottery_id = $1 AND draw_date = $2 AND is_winner = true`,
+      [result.lottery_id, result.draw_date]
+    );
+
+    await client.query('DELETE FROM lottery_results WHERE id = $1', [req.params.id]);
+    await client.query('COMMIT');
+    return res.json({ ok: true, winnersReverted: rowCount || 0 });
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    console.error('result delete error', err);
+    return res.status(500).json({ error: 'Error interno' });
+  } finally {
+    client.release();
+  }
+});
+
 export default router;
