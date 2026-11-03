@@ -204,7 +204,7 @@ export function AdminPrizes() {
                 <tr className="text-left border-b">
                   <th className="p-2">Boleto</th>
                   <th className="p-2">Lotería</th>
-                  <th className="p-2">Ganador</th>
+                  <th className="p-2">Usuario</th>
                   <th className="p-2 text-right">Monto</th>
                   <th className="p-2">Estado</th>
                   <th className="p-2 text-right">Acción</th>
